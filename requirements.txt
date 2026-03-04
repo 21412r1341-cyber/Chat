@@ -2,4 +2,4 @@ flask
 flask-socketio
 eventlet
 gunicorn
-anthropic
+better-profanity
