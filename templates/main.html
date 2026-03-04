@@ -4,98 +4,127 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Global Chat</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
-    body { background: #0e0e0f; color: #e8e8ea; font-family: 'Segoe UI', sans-serif; }
-    .chat-wrap { max-width: 640px; margin: 40px auto; padding: 0 16px; }
-    h4 { font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: #00e5a0; margin-bottom: 16px; }
-    #chat-window {
-      height: 420px; overflow-y: auto; background: #161618;
-      border: 1px solid #2a2a2d; border-radius: 10px;
-      padding: 16px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0e0e0f; color: #e8e8ea; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 16px; }
+    .app { width: 100%; max-width: 620px; height: min(720px, 92vh); background: #161618; border: 1px solid #2a2a2d; border-radius: 14px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 40px 80px rgba(0,0,0,0.6); }
+    .header { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #2a2a2d; background: #0e0e0f; flex-shrink: 0; }
+    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #6b6b72; transition: all 0.4s; flex-shrink: 0; }
+    .live-dot.on { background: #00e5a0; box-shadow: 0 0 10px #00e5a0; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .header-title { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+    .header-user { margin-left: auto; font-size: 12px; color: #00e5a0; background: rgba(0,229,160,0.1); padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(0,229,160,0.2); }
+    .logout-btn { font-size: 11px; color: #6b6b72; background: rgba(255,255,255,0.04); padding: 3px 10px; border-radius: 20px; border: 1px solid #2a2a2d; text-decoration: none; transition: color 0.15s; }
+    .logout-btn:hover { color: #f87171; border-color: rgba(248,113,113,0.3); }
+    #chat-window { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
     #chat-window::-webkit-scrollbar { width: 4px; }
     #chat-window::-webkit-scrollbar-thumb { background: #2a2a2d; border-radius: 2px; }
-    .msg { background: #1c1c1f; border: 1px solid #2a2a2d; border-radius: 8px; padding: 8px 12px; font-size: 14px; animation: in 0.15s ease-out; }
-    .msg.mine { background: rgba(0,229,160,0.08); border-color: rgba(0,229,160,0.2); }
+    .msg { display: flex; gap: 10px; animation: in 0.15s ease-out; }
+    .msg.mine { flex-direction: row-reverse; }
     @keyframes in { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+    .avatar { width: 30px; height: 30px; border-radius: 7px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; margin-top: 2px; }
+    .bubble { max-width: 75%; padding: 9px 13px; border-radius: 8px; border: 1px solid #2a2a2d; background: #1c1c1f; word-break: break-word; }
+    .msg.mine .bubble { background: rgba(0,229,160,0.08); border-color: rgba(0,229,160,0.2); }
     .sender { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6b6b72; margin-bottom: 3px; }
-    .msg.mine .sender { color: rgba(0,229,160,0.6); }
-    .send-input { background: #161618 !important; border: 1px solid #2a2a2d !important; color: #e8e8ea !important; border-radius: 8px !important; }
-    .send-input:focus { border-color: rgba(0,229,160,0.4) !important; box-shadow: none !important; }
-    .send-input::placeholder { color: #6b6b72 !important; }
-    .send-btn { background: #00e5a0; border: none; color: #000; font-weight: 600; font-size: 13px; border-radius: 8px; padding: 10px 20px; }
-    .send-btn:hover { background: #00c98d; }
-    .status { font-size: 11px; color: #6b6b72; margin-bottom: 8px; }
-    .status.connected { color: #00e5a0; }
-    #username-display { font-size: 11px; color: #6b6b72; float: right; }
+    .msg.mine .sender { color: rgba(0,229,160,0.6); text-align: right; }
+    .text { font-size: 14px; line-height: 1.5; color: #e8e8ea; }
+    .empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #6b6b72; font-size: 13px; }
+    .input-area { padding: 14px 20px; border-top: 1px solid #2a2a2d; background: #0e0e0f; flex-shrink: 0; display: flex; gap: 10px; }
+    .msg-input { flex: 1; background: #161618; border: 1px solid #2a2a2d; border-radius: 8px; padding: 10px 14px; color: #e8e8ea; font-size: 14px; outline: none; transition: border-color 0.15s; }
+    .msg-input:focus { border-color: rgba(0,229,160,0.4); }
+    .msg-input::placeholder { color: #6b6b72; }
+    .msg-input:disabled { opacity: 0.4; }
+    .send-btn { background: #00e5a0; color: #000; border: none; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+    .send-btn:hover:not(:disabled) { opacity: 0.85; }
+    .send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
   </style>
 </head>
 <body>
-  <div class="chat-wrap">
-    <div class="d-flex align-items-center mb-2">
-      <h4 class="mb-0">Global Chat</h4>
-      <span id="username-display" class="ms-auto"></span>
-    </div>
-    <div class="status" id="status">Connecting…</div>
-    <div id="chat-window"></div>
-    <div class="d-flex gap-2">
-      <input class="send-input form-control" id="msg-input" placeholder="Message…" autocomplete="off" maxlength="500">
-      <button class="send-btn" id="send-btn">Send</button>
-    </div>
+<div class="app">
+  <div class="header">
+    <div class="live-dot" id="dot"></div>
+    <span class="header-title">Global Chat</span>
+    <span class="header-user">{{ username }}</span>
+    <a class="logout-btn" href="/logout">Log out</a>
   </div>
+  <div id="chat-window">
+    <div class="empty" id="empty">No messages yet — say hello!</div>
+  </div>
+  <div class="input-area">
+    <input class="msg-input" id="msg-input" placeholder="Message…" autocomplete="off" maxlength="500" disabled>
+    <button class="send-btn" id="send-btn" disabled>Send</button>
+  </div>
+</div>
 
-  <script>
-    const socket = io();
-    const chatWindow = document.getElementById('chat-window');
-    const msgInput = document.getElementById('msg-input');
-    const sendBtn = document.getElementById('send-btn');
-    const status = document.getElementById('status');
+<script>
+  const ME = "{{ username }}";
+  const COLORS = [
+    ['rgba(0,229,160,0.12)','#00e5a0'],
+    ['rgba(167,139,250,0.12)','#a78bfa'],
+    ['rgba(251,191,36,0.12)','#fbbf24'],
+    ['rgba(248,113,113,0.12)','#f87171'],
+    ['rgba(96,165,250,0.12)','#60a5fa'],
+    ['rgba(244,114,182,0.12)','#f472b6'],
+  ];
+  function getColor(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 1000;
+    return COLORS[Math.abs(h) % COLORS.length];
+  }
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-    // Extract username from cookie/session via first received message isn't available,
-    // so we display it after connection via a join event instead.
-    // For now show a placeholder.
-    document.getElementById('username-display').textContent = '';
+  const chatWindow = document.getElementById('chat-window');
+  const msgInput = document.getElementById('msg-input');
+  const sendBtn = document.getElementById('send-btn');
+  const dot = document.getElementById('dot');
+  const empty = document.getElementById('empty');
 
-    socket.on('connect', () => {
-      status.textContent = '● Connected';
-      status.classList.add('connected');
-    });
+  const socket = io();
 
-    socket.on('disconnect', () => {
-      status.textContent = 'Disconnected — reconnecting…';
-      status.classList.remove('connected');
-    });
+  socket.on('connect', () => {
+    dot.classList.add('on');
+    msgInput.disabled = false;
+    sendBtn.disabled = false;
+    msgInput.focus();
+  });
 
-    socket.on('message', (msg) => {
-      const colonIdx = msg.indexOf(': ');
-      const sender = colonIdx !== -1 ? msg.slice(0, colonIdx) : '';
-      const text   = colonIdx !== -1 ? msg.slice(colonIdx + 2) : msg;
+  socket.on('disconnect', () => {
+    dot.classList.remove('on');
+    msgInput.disabled = true;
+    sendBtn.disabled = true;
+  });
 
-      const div = document.createElement('div');
-      div.className = 'msg';
-      div.innerHTML = `<div class="sender">${escHtml(sender)}</div><div>${escHtml(text)}</div>`;
-      chatWindow.appendChild(div);
+  socket.on('message', (msg) => {
+    if (empty && empty.parentNode) empty.remove();
+    const colonIdx = msg.indexOf(': ');
+    const sender = colonIdx !== -1 ? msg.slice(0, colonIdx) : '?';
+    const text = colonIdx !== -1 ? msg.slice(colonIdx + 2) : msg;
+    const isMe = sender === ME;
+    const [bg, color] = getColor(sender);
+    const initials = sender.slice(0,2).toUpperCase();
+    const div = document.createElement('div');
+    div.className = 'msg' + (isMe ? ' mine' : '');
+    div.innerHTML = `
+      <div class="avatar" style="background:${bg};color:${color}">${esc(initials)}</div>
+      <div class="bubble">
+        <div class="sender">${esc(sender)}</div>
+        <div class="text">${esc(text)}</div>
+      </div>`;
+    chatWindow.appendChild(div);
+    while (chatWindow.querySelectorAll('.msg').length > 100) chatWindow.querySelector('.msg').remove();
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  });
 
-      // Trim to 100
-      while (chatWindow.children.length > 100) chatWindow.removeChild(chatWindow.firstChild);
-      chatWindow.scrollTop = chatWindow.scrollHeight;
-    });
+  function send() {
+    const text = msgInput.value.trim();
+    if (!text) return;
+    socket.send(text);
+    msgInput.value = '';
+  }
 
-    function sendMessage() {
-      const text = msgInput.value.trim();
-      if (!text) return;
-      socket.send(text);
-      msgInput.value = '';
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    msgInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
-
-    function escHtml(s) {
-      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    }
-  </script>
+  sendBtn.addEventListener('click', send);
+  msgInput.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+</script>
 </body>
 </html>
