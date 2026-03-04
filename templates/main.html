@@ -131,6 +131,10 @@
     chatWindow.scrollTop = chatWindow.scrollHeight;
   });
 
+  socket.on('blocked', ({ reason }) => {
+    showToast('🚫 ' + reason);
+  });
+
   socket.on('delete_messages', (ids) => {
     if (ids === 'all') {
       chatWindow.innerHTML = '<div class="empty">Chat was cleared.</div>';
