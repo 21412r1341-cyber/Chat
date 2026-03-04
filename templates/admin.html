@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CoolChat — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0b;color:#f0f0f2;font-family:'DM Sans',sans-serif;padding:32px}
+.header{display:flex;align-items:center;gap:16px;margin-bottom:32px}
+h1{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:#ff6060}
+.back{font-family:'JetBrains Mono',monospace;font-size:11px;color:#555560;text-decoration:none;background:#111113;border:1px solid #222226;padding:6px 14px;border-radius:7px}
+.stats{display:flex;gap:16px;margin-bottom:32px;flex-wrap:wrap}
+.stat{background:#111113;border:1px solid #222226;border-radius:12px;padding:18px 24px}
+.stat-val{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:#00ff88}
+.stat-label{font-size:12px;color:#555560;margin-top:4px}
+.actions{display:flex;gap:10px;margin-bottom:28px;flex-wrap:wrap}
+.btn{padding:9px 18px;border-radius:8px;border:none;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block}
+.btn-danger{background:rgba(255,80,80,0.15);color:#ff6060;border:1px solid rgba(255,80,80,0.3)}
+.btn-danger:hover{background:rgba(255,80,80,0.25)}
+table{width:100%;border-collapse:collapse;background:#111113;border:1px solid #222226;border-radius:12px;overflow:hidden}
+th{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#555560;padding:12px 16px;text-align:left;border-bottom:1px solid #222226}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid #16161a}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.02)}
+.badge{display:inline-block;padding:2px 8px;border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600}
+.badge-admin{background:rgba(255,96,96,0.15);color:#ff6060;border:1px solid rgba(255,96,96,0.3)}
+.badge-online{background:rgba(0,255,136,0.12);color:#00ff88;border:1px solid rgba(0,255,136,0.25)}
+.badge-banned{background:rgba(255,150,0,0.12);color:#ffaa00;border:1px solid rgba(255,150,0,0.25)}
+.act-btn{padding:4px 10px;border-radius:5px;border:none;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;margin-right:4px}
+.ban{background:rgba(255,80,80,0.1);color:#ff6060;border:1px solid rgba(255,80,80,0.2)}
+.unban{background:rgba(0,255,136,0.1);color:#00ff88;border:1px solid rgba(0,255,136,0.2)}
+.del{background:rgba(255,80,80,0.1);color:#ff4040;border:1px solid rgba(255,80,80,0.2)}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>⚡ Admin Panel</h1>
+  <a class="back" href="/">← Back to Chat</a>
+</div>
+
+<div class="stats">
+  <div class="stat"><div class="stat-val">{{ user_count }}</div><div class="stat-label">Total Users</div></div>
+  <div class="stat"><div class="stat-val">{{ msg_count }}</div><div class="stat-label">Total Messages</div></div>
+  <div class="stat"><div class="stat-val">{{ online|length }}</div><div class="stat-label">Online Now</div></div>
+</div>
+
+<div class="actions">
+  <a class="btn btn-danger" href="/admin/clear_chat" onclick="return confirm('Clear all global chat messages?')">🗑 Clear Global Chat</a>
+</div>
+
+<table>
+  <thead>
+    <tr><th>User</th><th>Status</th><th>Joined</th><th>Actions</th></tr>
+  </thead>
+  <tbody>
+    {% for user in users %}
+    <tr>
+      <td>
+        {{ user[1] }}
+        {% if user[2] %}<span class="badge badge-admin">ADMIN</span>{% endif %}
+        {% if user[1] in online %}<span class="badge badge-online">● ONLINE</span>{% endif %}
+      </td>
+      <td>{% if user[4] %}<span class="badge badge-banned">BANNED</span>{% else %}<span style="color:#555560;font-size:12px">Active</span>{% endif %}</td>
+      <td style="color:#555560;font-size:12px;font-family:'JetBrains Mono',monospace">{{ user[4] }}</td>
+      <td>
+        {% if not user[2] %}
+          {% if user[4] %}
+            <a class="act-btn unban" href="/admin/unban/{{ user[1] }}">Unban</a>
+          {% else %}
+            <a class="act-btn ban" href="/admin/ban/{{ user[1] }}" onclick="return confirm('Ban {{ user[1] }}?')">Ban</a>
+          {% endif %}
+          <a class="act-btn del" href="/admin/delete_user/{{ user[1] }}" onclick="return confirm('Permanently delete {{ user[1] }}?')">Delete</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</body>
+</html>
