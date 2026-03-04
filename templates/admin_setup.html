@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Setup</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a0b;color:#f0f0f2;font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+.card{background:#111113;border:1px solid #222226;border-radius:16px;padding:40px 36px;width:100%;max-width:400px}
+h2{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#ff6060;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px}
+.sub{font-size:13px;color:#555560;margin-bottom:28px}
+label{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#555560;margin-bottom:7px}
+input{width:100%;background:#0a0a0b;border:1px solid #222226;border-radius:9px;padding:11px 14px;color:#f0f0f2;font-size:14px;outline:none;margin-bottom:18px;transition:border-color 0.15s}
+input:focus{border-color:rgba(255,96,96,0.4)}
+.btn{width:100%;background:#ff6060;color:#000;border:none;border-radius:9px;padding:12px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;cursor:pointer}
+.error{background:rgba(255,80,80,0.08);border:1px solid rgba(255,80,80,0.25);border-radius:9px;padding:10px 14px;font-size:13px;color:#ff6060;margin-bottom:18px}
+.success{background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.25);border-radius:9px;padding:10px 14px;font-size:13px;color:#00ff88;margin-bottom:18px}
+.warning{font-size:12px;color:#555560;margin-top:16px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>⚠ Admin Setup</h2>
+  <p class="sub">This page is secret — only you should know it exists.</p>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  {% if success %}<div class="success">{{ success }} <a href="/login" style="color:inherit">Login →</a></div>{% endif %}
+  <form method="POST">
+    <label>Admin Secret Key</label>
+    <input type="password" name="secret" placeholder="from your Render env vars" required>
+    <label>Admin Username</label>
+    <input type="text" name="username" placeholder="choose a username" required minlength="3" maxlength="20">
+    <label>Admin Password (12+ chars)</label>
+    <input type="password" name="password" placeholder="very strong password" required minlength="12">
+    <button class="btn" type="submit">CREATE ADMIN →</button>
+  </form>
+  <p class="warning">⚠ After creating your admin account, don't share this URL with anyone. The ADMIN_SECRET env var is your protection.</p>
+</div>
+</body>
+</html>
