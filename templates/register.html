@@ -1,1 +1,44 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — Global Chat</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0e0e0f; color: #e8e8ea; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .card { background: #161618; border: 1px solid #2a2a2d; border-radius: 14px; padding: 36px 32px; width: 100%; max-width: 360px; }
+    h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .sub { font-size: 13px; color: #6b6b72; margin-bottom: 28px; }
+    label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #6b6b72; margin-bottom: 6px; }
+    input { width: 100%; background: #0e0e0f; border: 1px solid #2a2a2d; border-radius: 8px; padding: 10px 14px; color: #e8e8ea; font-size: 14px; outline: none; margin-bottom: 18px; transition: border-color 0.15s; }
+    input:focus { border-color: rgba(0,229,160,0.5); }
+    .hint { font-size: 11px; color: #6b6b72; margin-top: -14px; margin-bottom: 18px; }
+    .btn { width: 100%; background: #00e5a0; color: #000; border: none; border-radius: 8px; padding: 11px; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .error { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.3); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #f87171; margin-bottom: 18px; }
+    .footer { text-align: center; margin-top: 20px; font-size: 13px; color: #6b6b72; }
+    .footer a { color: #00e5a0; text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h2>Create account</h2>
+  <p class="sub">Pick a username and password to join</p>
+  {% if error %}
+  <div class="error">{{ error }}</div>
+  {% endif %}
+  <form method="POST">
+    <label>Username</label>
+    <input type="text" name="username" placeholder="e.g. cooluser99" autocomplete="username" required minlength="3" maxlength="20">
+    <p class="hint">3–20 characters</p>
+    <label>Password</label>
+    <input type="password" name="password" placeholder="Choose a password" autocomplete="new-password" required minlength="6">
+    <p class="hint">At least 6 characters</p>
+    <button class="btn" type="submit">Create Account</button>
+  </form>
+  <div class="footer">Already have an account? <a href="/login">Log in</a></div>
+</div>
+</body>
+</html>
