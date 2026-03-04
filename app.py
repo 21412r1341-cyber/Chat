@@ -2,19 +2,19 @@ import eventlet
 eventlet.monkey_patch()
 
 from flask import Flask, render_template, session, request, redirect, url_for
-from flask_socketio import SocketIO, send, emit
+from flask_socketio import SocketIO, emit
 import sqlite3
 import os
 import hashlib
-import json
-import anthropic
+from better_profanity import profanity
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'changeme-use-a-long-random-string'
 socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins='*')
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'chat.db')
-ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
+
+profanity.load_censor_words()
 
 # ── Database ─────────────────────────────────────────────
 
@@ -46,55 +46,10 @@ def get_history():
     except Exception:
         return []
 
-# ── AI Moderation ─────────────────────────────────────────
-
-def moderate_messages():
-    """Run every 5 seconds — ask Claude if any recent messages are bad, delete them."""
-    while True:
-        eventlet.sleep(5)
-        if not ANTHROPIC_API_KEY:
-            continue
-        try:
-            with sqlite3.connect(DB_PATH) as conn:
-                cur = conn.execute('SELECT id, content FROM messages ORDER BY id DESC LIMIT 20')
-                msgs = cur.fetchall()
-
-            if not msgs:
-                continue
-
-            # Build list for Claude to review
-            msg_list = [{'id': m[0], 'content': m[1]} for m in msgs]
-            prompt = (
-                "You are a chat moderator. Review these chat messages and return a JSON array "
-                "of IDs that contain hate speech, slurs, explicit sexual content, threats, spam, "
-                "or illegal content. Only flag genuinely bad messages. If nothing is bad return []. "
-                "Respond with ONLY a JSON array of integer IDs, nothing else.\n\n"
-                "Messages:\n" + json.dumps(msg_list)
-            )
-
-            client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-            response = client.messages.create(
-                model='claude-opus-4-6',
-                max_tokens=256,
-                messages=[{'role': 'user', 'content': prompt}]
-            )
-
-            raw = response.content[0].text.strip()
-            bad_ids = json.loads(raw)
-
-            if not isinstance(bad_ids, list) or not bad_ids:
-                continue
-
-            # Delete bad messages from DB
-            with sqlite3.connect(DB_PATH) as conn:
-                for mid in bad_ids:
-                    conn.execute('DELETE FROM messages WHERE id = ?', (mid,))
-
-            # Tell all clients to remove those messages
-            socketio.emit('delete_messages', bad_ids)
-
-        except Exception as e:
-            print(f'Moderation error: {e}')
+def is_bad(content):
+    # Strip "username: " prefix before checking
+    text = content.split(': ', 1)[-1] if ': ' in content else content
+    return profanity.contains_profanity(text)
 
 # ── Routes ────────────────────────────────────────────────
 
@@ -161,7 +116,6 @@ def reset():
 def handle_connect():
     if 'username' not in session:
         return False
-    # Send history with IDs so client can delete by ID later
     for mid, content in get_history():
         emit('chat_message', {'id': mid, 'content': content})
 
@@ -171,6 +125,12 @@ def handle_message(msg):
         return
     username = session['username']
     full_msg = f"{username}: {msg}"
+
+    # Block bad messages immediately — don't store or broadcast
+    if is_bad(full_msg):
+        emit('blocked', {'reason': 'Your message was blocked by the filter.'})
+        return
+
     with sqlite3.connect(DB_PATH) as conn:
         cur = conn.execute('INSERT INTO messages (content) VALUES (?)', (full_msg,))
         msg_id = cur.lastrowid
@@ -180,7 +140,5 @@ def handle_message(msg):
 
 if __name__ == '__main__':
     init_db()
-    # Start moderation loop in background
-    eventlet.spawn(moderate_messages)
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, host='0.0.0.0', port=port, debug=False)
