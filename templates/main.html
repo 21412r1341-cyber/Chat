@@ -14,6 +14,7 @@
     .live-dot.on { background: #00e5a0; box-shadow: 0 0 10px #00e5a0; animation: pulse 2s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
     .header-title { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+    .ai-badge { font-size: 11px; color: #a78bfa; background: rgba(167,139,250,0.1); padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(167,139,250,0.25); }
     .header-user { margin-left: auto; font-size: 12px; color: #00e5a0; background: rgba(0,229,160,0.1); padding: 3px 10px; border-radius: 20px; border: 1px solid rgba(0,229,160,0.2); }
     .logout-btn { font-size: 11px; color: #6b6b72; background: rgba(255,255,255,0.04); padding: 3px 10px; border-radius: 20px; border: 1px solid #2a2a2d; text-decoration: none; transition: color 0.15s; }
     .logout-btn:hover { color: #f87171; border-color: rgba(248,113,113,0.3); }
@@ -29,6 +30,7 @@
     .sender { font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #6b6b72; margin-bottom: 3px; }
     .msg.mine .sender { color: rgba(0,229,160,0.6); text-align: right; }
     .text { font-size: 14px; line-height: 1.5; color: #e8e8ea; }
+    .deleted { opacity: 0; transform: scale(0.95); transition: all 0.3s ease-out; pointer-events: none; }
     .empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #6b6b72; font-size: 13px; }
     .input-area { padding: 14px 20px; border-top: 1px solid #2a2a2d; background: #0e0e0f; flex-shrink: 0; display: flex; gap: 10px; }
     .msg-input { flex: 1; background: #161618; border: 1px solid #2a2a2d; border-radius: 8px; padding: 10px 14px; color: #e8e8ea; font-size: 14px; outline: none; transition: border-color 0.15s; }
@@ -38,6 +40,8 @@
     .send-btn { background: #00e5a0; color: #000; border: none; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity 0.15s; }
     .send-btn:hover:not(:disabled) { opacity: 0.85; }
     .send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: rgba(248,113,113,0.15); border: 1px solid rgba(248,113,113,0.3); color: #f87171; font-size: 12px; padding: 8px 16px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 99; }
+    .toast.show { opacity: 1; }
   </style>
 </head>
 <body>
@@ -45,6 +49,7 @@
   <div class="header">
     <div class="live-dot" id="dot"></div>
     <span class="header-title">Global Chat</span>
+    <span class="ai-badge">🤖 AI Moderated</span>
     <span class="header-user">{{ username }}</span>
     <a class="logout-btn" href="/logout">Log out</a>
   </div>
@@ -56,6 +61,7 @@
     <button class="send-btn" id="send-btn" disabled>Send</button>
   </div>
 </div>
+<div class="toast" id="toast">🤖 A message was removed by AI moderation</div>
 
 <script>
   const ME = "{{ username }}";
@@ -79,6 +85,14 @@
   const sendBtn = document.getElementById('send-btn');
   const dot = document.getElementById('dot');
   const empty = document.getElementById('empty');
+  const toast = document.getElementById('toast');
+
+  let toastTimer = null;
+  function showToast() {
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
+  }
 
   const socket = io();
 
@@ -95,16 +109,17 @@
     sendBtn.disabled = true;
   });
 
-  socket.on('message', (msg) => {
+  socket.on('chat_message', ({ id, content }) => {
     if (empty && empty.parentNode) empty.remove();
-    const colonIdx = msg.indexOf(': ');
-    const sender = colonIdx !== -1 ? msg.slice(0, colonIdx) : '?';
-    const text = colonIdx !== -1 ? msg.slice(colonIdx + 2) : msg;
+    const colonIdx = content.indexOf(': ');
+    const sender = colonIdx !== -1 ? content.slice(0, colonIdx) : '?';
+    const text = colonIdx !== -1 ? content.slice(colonIdx + 2) : content;
     const isMe = sender === ME;
     const [bg, color] = getColor(sender);
     const initials = sender.slice(0,2).toUpperCase();
     const div = document.createElement('div');
     div.className = 'msg' + (isMe ? ' mine' : '');
+    div.dataset.id = id;
     div.innerHTML = `
       <div class="avatar" style="background:${bg};color:${color}">${esc(initials)}</div>
       <div class="bubble">
@@ -116,15 +131,32 @@
     chatWindow.scrollTop = chatWindow.scrollHeight;
   });
 
-  function send() {
+  socket.on('delete_messages', (ids) => {
+    if (ids === 'all') {
+      chatWindow.innerHTML = '<div class="empty">Chat was cleared.</div>';
+      return;
+    }
+    let removed = 0;
+    ids.forEach(id => {
+      const el = chatWindow.querySelector(`[data-id="${id}"]`);
+      if (el) {
+        el.classList.add('deleted');
+        setTimeout(() => el.remove(), 300);
+        removed++;
+      }
+    });
+    if (removed > 0) showToast();
+  });
+
+  function sendMsg() {
     const text = msgInput.value.trim();
     if (!text) return;
     socket.send(text);
     msgInput.value = '';
   }
 
-  sendBtn.addEventListener('click', send);
-  msgInput.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+  sendBtn.addEventListener('click', sendMsg);
+  msgInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMsg(); });
 </script>
 </body>
 </html>
