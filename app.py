@@ -15,7 +15,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-to-somethin
 socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins='*', max_http_buffer_size=5_000_000)
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'chat.db')
-ADMIN_SECRET = os.environ.get('wokfjwjnf!$£2525r2wr23fwa!"£!', '')  # Set this in Render env vars
+ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'wokfjwjnf!$£2525r2wr23fwa!"£!')  # Set this in Render env vars
 
 profanity.load_censor_words()
 
