@@ -416,7 +416,8 @@ def on_typing(data):
     socketio.emit('user_typing', {'user': username, 'room': room}, room=target_room, include_self=False)
 
 
+init_db()
+
 if __name__ == '__main__':
-    init_db()
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, host='0.0.0.0', port=port, debug=False)
