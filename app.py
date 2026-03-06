@@ -1,5 +1,5 @@
-import eventlet
-eventlet.monkey_patch()
+from gevent import monkey
+monkey.patch_all()
 
 from flask import Flask, render_template, session, request, redirect, url_for, jsonify
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -12,15 +12,10 @@ from better_profanity import profanity
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-to-something-long-and-random')
-socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins='*', max_http_buffer_size=5_000_000)
-
-socketio = SocketIO(app, cors_allowed_origins=[
-    "http://127.0.0.1:5000", 
-    "https://coolchat.is-a-dev"
-])
+socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins='*', max_http_buffer_size=5_000_000)
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'chat.db')
-ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'wokfjwjnf!$£2525r2wr23fwa!"£!')  # Set this in Render env vars
+ADMIN_SECRET = os.environ.get('ADMIN_SECRET', '')  # Set this in Render env vars
 
 profanity.load_censor_words()
 
@@ -32,7 +27,7 @@ rate_limits = defaultdict(list)  # {username: [timestamps]}
 # ── Database ──────────────────────────────────────────────────────────────────
 
 def init_db():
-    with sqlite3.connect(DB_PATH) as conn:
+    with sqlite3.connect(DB_PATH, check_same_thread=False) as conn:
         conn.execute('''CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
@@ -64,7 +59,7 @@ def init_db():
         )''')
 
 def db():
-    return sqlite3.connect(DB_PATH)
+    return sqlite3.connect(DB_PATH, check_same_thread=False)
 
 def hash_pw(pw):
     return hashlib.sha256(pw.encode()).hexdigest()
