@@ -14,6 +14,11 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-this-to-something-long-and-random')
 socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins='*', max_http_buffer_size=5_000_000)
 
+socketio = SocketIO(app, cors_allowed_origins=[
+    "http://127.0.0.1:5000", 
+    "https://coolchat.is-a-dev"
+])
+
 DB_PATH = os.path.join(os.path.dirname(__file__), 'chat.db')
 ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'wokfjwjnf!$£2525r2wr23fwa!"£!')  # Set this in Render env vars
 
